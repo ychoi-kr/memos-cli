@@ -7,7 +7,7 @@ Thin command-line client for [usememos](https://github.com/usememos/memos) self-
 - Maps usememos REST API endpoints 1:1 to `memos <resource> <verb>` commands.
 - Stores tokens in the OS keyring (macOS Keychain / Windows Credential Manager / Linux Secret Service).
 - Keeps URL in `~/.config/memos/config.toml` (plaintext, non-secret).
-- Handles UTF-8 encoding, base64, and multipart upload internally.
+- Handles UTF-8 encoding and base64 attachment upload internally.
 - Works identically on bash, zsh, PowerShell, and fish.
 
 ## What it does *not* do
@@ -25,12 +25,12 @@ See `PRD.md` section 3.2.
 ## Install
 
 ```bash
-uv tool install memos-cli      # recommended
+uv tool install git+https://github.com/ychoi-kr/memos-cli      # recommended
 # or
-pip install --user memos-cli
+pip install --user git+https://github.com/ychoi-kr/memos-cli
 ```
 
-Requires Python 3.11+.
+Requires Python 3.11+. PyPI publishing is deferred to v1.0 (see PRD §10).
 
 ## First-time setup
 
@@ -64,7 +64,7 @@ export MEMOS_TOKEN=...
 memos memo list [--filter EXPR] [--page-size N] [--page-token T] [--pretty]
 memos memo get <name> [--pretty]
 memos memo create [--content STR | stdin] [--visibility V] [--pretty]
-memos memo update <name> [--content STR | stdin] [--visibility V]
+memos memo update <name> [--content STR | stdin] [--visibility V] [--pretty]
 memos memo delete <name>
 ```
 
@@ -117,6 +117,7 @@ usememos resource names look like `{collection}/{id}` — `memos/abc123`, `attac
 
 - Default: JSON on stdout.
 - `--pretty`: tab-separated summary suitable for human reading.
+- `attachment download` is an exception — it writes the file (or streams bytes to stdout with `--output -`) and prints only the saved path on stdout.
 - Errors: one line on stderr, non-zero exit code.
 
 | Exit code | Meaning |
@@ -131,9 +132,9 @@ usememos resource names look like `{collection}/{id}` — `memos/abc123`, `attac
 ## Security
 
 - Token is never printed to stdout, stderr, or logs.
-- `Authorization` header is masked in any request logging.
+- `Authorization` header is held only in the in-memory `Session` and is never written out.
 - A `token` key in `config.toml` is ignored with a stderr warning — use `memos auth login` instead.
-- `update`/`delete` reject empty stdin to prevent accidental destruction.
+- `memo create` and `memo update` reject empty stdin (exit 2) to prevent silently writing an empty body.
 
 ## License
 

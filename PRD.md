@@ -25,7 +25,7 @@ memos-cli는 이 두 격차만 메웁니다.
 - usememos REST API(v0.25+)의 주요 엔드포인트를 자원·동사 형태로 노출
 - 자격증명 안전 보관: 토큰 keyring, URL 평문 config.toml, env fallback
 - 머신·환경 독립(macOS·Windows·Linux × bash·zsh·PowerShell)
-- 인코딩(UTF-8)·base64·multipart 업로드 내부 처리
+- 인코딩(UTF-8) 및 첨부 업로드(base64 JSON body) 내부 처리
 - JSON 기본 출력, `--pretty` 옵션으로 표/사람 친화 출력
 
 ### 3.2 Out of scope (사용자/스킬이 결정)

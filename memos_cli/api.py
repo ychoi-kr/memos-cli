@@ -104,10 +104,22 @@ class Client:
     def delete(self, path: str) -> Any:
         return self._request("DELETE", path)
 
-    def upload(self, path: str, file_path: Path) -> Any:
-        with file_path.open("rb") as f:
-            files = {"file": (file_path.name, f)}
-            return self._request("POST", path, files=files)
+    def upload(self, path: str, file_path: Path, *, mime: str | None = None) -> Any:
+        """Upload a file. usememos expects base64 content inside a JSON body."""
+        import base64
+        import mimetypes
+
+        if mime is None:
+            mime, _ = mimetypes.guess_type(str(file_path))
+            if mime is None:
+                mime = "application/octet-stream"
+
+        payload = {
+            "filename": file_path.name,
+            "type": mime,
+            "content": base64.b64encode(file_path.read_bytes()).decode("ascii"),
+        }
+        return self._request("POST", path, json=payload)
 
     def download(self, path: str) -> bytes:
         """Fetch a raw binary response (e.g. attachment content)."""

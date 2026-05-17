@@ -129,3 +129,39 @@ def test_download_to_directory_appends_filename(
     )
     assert result.exit_code == 0
     assert (target_dir / "y.md").read_bytes() == b"bytes"
+
+
+def test_upload_sends_base64_json(configured, stub_session, tmp_path):
+    """usememos v0.25 requires base64-in-JSON, not multipart."""
+    import base64
+
+    f = tmp_path / "note.md"
+    f.write_bytes(b"# hi")
+    stub_session["responses"].append(
+        FakeResponse(200, json_body={"name": "attachments/new", "filename": "note.md"})
+    )
+    from memos_cli.cli import app
+
+    result = CliRunner().invoke(app, ["attachment", "upload", str(f)])
+    assert result.exit_code == 0
+    call = stub_session["calls"][0]
+    assert call["method"] == "POST"
+    assert call["url"].endswith("/api/v1/attachments")
+    assert call["files"] is None  # never multipart
+    body = call["json"]
+    assert body["filename"] == "note.md"
+    assert body["type"] == "text/markdown"
+    assert base64.b64decode(body["content"]) == b"# hi"
+
+
+def test_upload_unknown_mime_uses_octet_stream(configured, stub_session, tmp_path):
+    f = tmp_path / "blob.weirdext"
+    f.write_bytes(b"\x00\x01\x02")
+    stub_session["responses"].append(
+        FakeResponse(200, json_body={"name": "attachments/x", "filename": "blob.weirdext"})
+    )
+    from memos_cli.cli import app
+
+    result = CliRunner().invoke(app, ["attachment", "upload", str(f)])
+    assert result.exit_code == 0
+    assert stub_session["calls"][0]["json"]["type"] == "application/octet-stream"
