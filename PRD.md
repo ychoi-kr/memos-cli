@@ -62,10 +62,13 @@ memos-cli는 이 두 격차만 메웁니다.
 |---|---|
 | `memos attachment upload <file>` | `POST /api/v1/attachments` |
 | `memos attachment list [--memo NAME]` | `GET /api/v1/attachments` |
-| `memos attachment get <name>` | `GET /api/v1/attachments/{name}` |
+| `memos attachment get <name>` | `GET /api/v1/attachments/{name}` (메타데이터) |
+| `memos attachment download <name> [--output PATH \| -]` | `GET /file/attachments/{uid}/{filename}` (콘텐츠) |
 | `memos attachment delete <name>` | `DELETE /api/v1/attachments/{name}` |
 
-업로드 명령은 응답에서 `name`(예: `attachments/xxxx`)과 `filename`을 JSON으로 반환합니다. 사용자가 본문에 링크를 박을지 여부는 호출자가 결정합니다.
+`get`은 메타데이터(JSON)만 반환합니다. 실제 파일 바이트를 받으려면 `download`를 사용합니다. `--output`을 생략하면 원본 `filename`을 현재 디렉터리에 저장하고, `-`을 주면 stdout으로 출력합니다(파이프 가능).
+
+`upload`는 응답에서 `name`(예: `attachments/xxxx`)과 `filename`을 JSON으로 반환합니다. 사용자가 본문에 링크를 박을지 여부는 호출자가 결정합니다.
 
 ### 4.3 `user`
 
@@ -91,6 +94,18 @@ memos-cli는 이 두 격차만 메웁니다.
 | `memos auth login` | 토큰 입력 프롬프트(getpass) → keyring 저장 |
 | `memos auth logout` | keyring에서 토큰 삭제 |
 | `memos auth status` | 토큰 보관 위치(keyring/env/없음) 출력. 값은 출력하지 않음 |
+
+### 4.6 이름 입력 규칙
+
+usememos REST API는 `{collection}/{id}` 형태의 자원 이름을 사용합니다(`memos/abc123`, `attachments/xyz`, `users/3`). CLI는 두 가지 입력을 모두 받습니다.
+
+| 입력 | 해석 |
+|---|---|
+| `memos/abc123` | 정규형 — 그대로 사용 |
+| `abc123` | 컨텍스트 자원에 맞춰 `{prefix}/abc123`로 보정 |
+| `attachments/xyz` (memo 명령에 입력 등 다른 prefix) | 슬래시가 포함돼 있으면 보정하지 않고 그대로 전달 — 잘못 입력하면 404 |
+
+각 명령은 자신이 다루는 자원에 한해 raw id를 받아 prefix를 자동으로 붙입니다. 슬래시가 포함된 입력은 사용자가 의도적으로 지정한 것으로 보고 절대 재작성하지 않습니다.
 
 ## 5. 자격증명 및 설정
 

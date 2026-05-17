@@ -78,8 +78,11 @@ memos memo delete <name>
 memos attachment upload <file> [--pretty]
 memos attachment list [--memo NAME] [--pretty]
 memos attachment get <name> [--pretty]
+memos attachment download <name> [--output PATH | -]
 memos attachment delete <name>
 ```
+
+`get` returns metadata (JSON). To fetch the file bytes, use `download` — without `--output`, the original filename is written to the current directory; with `--output -`, the bytes are streamed to stdout.
 
 ### user
 
@@ -105,6 +108,10 @@ memos auth login            # prompt for token, store in keyring
 memos auth logout           # remove from keyring
 memos auth status           # show storage location (never the value)
 ```
+
+## Name handling
+
+usememos resource names look like `{collection}/{id}` — `memos/abc123`, `attachments/xyz`, `users/3`. The CLI accepts either the canonical form or the raw id; raw ids are prefixed with the surrounding command's collection. Names containing a slash are never rewritten, so `memos attachment get memos/x` will not silently be turned into `attachments/memos/x`.
 
 ## Output
 

@@ -7,6 +7,7 @@ import sys
 import typer
 
 from ..api import Client
+from ..names import normalize
 from ..output import emit, write_memo_pretty, die
 
 app = typer.Typer(help="Manage memos", no_args_is_help=True)
@@ -51,10 +52,11 @@ def list_(
 
 @app.command("get")
 def get(
-    name: str = typer.Argument(..., help="memo name, e.g. memos/abc123"),
+    name: str = typer.Argument(..., help="memo name (memos/abc123) or raw uid"),
     pretty: bool = typer.Option(False, "--pretty"),
 ):
     """Get a memo."""
+    name = normalize("memos", name)
     client = Client()
     data = client.get(f"/api/v1/{name}")
     emit(
@@ -86,7 +88,7 @@ def create(
 
 @app.command("update")
 def update(
-    name: str = typer.Argument(..., help="memo name, e.g. memos/abc123"),
+    name: str = typer.Argument(..., help="memo name (memos/abc123) or raw uid"),
     content: str = typer.Option(None, "--content", help="memo body (or stdin)"),
     visibility: str = typer.Option(None, "--visibility"),
     pretty: bool = typer.Option(False, "--pretty"),
@@ -102,6 +104,7 @@ def update(
     if not payload:
         die("update requires --content/stdin or --visibility", code=2)
 
+    name = normalize("memos", name)
     client = Client()
     data = client.patch(f"/api/v1/{name}", json=payload)
     emit(
@@ -113,9 +116,10 @@ def update(
 
 @app.command("delete")
 def delete(
-    name: str = typer.Argument(..., help="memo name"),
+    name: str = typer.Argument(..., help="memo name or raw uid"),
 ):
     """Delete a memo."""
+    name = normalize("memos", name)
     client = Client()
     client.delete(f"/api/v1/{name}")
     print(f"deleted: {name}")

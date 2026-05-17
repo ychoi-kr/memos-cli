@@ -77,3 +77,33 @@ def test_update_without_any_input_exits_2(
     # No --content, no --visibility, stdin is a tty in CliRunner by default
     result = runner.invoke(app, ["memo", "update", "memos/x"])
     assert result.exit_code == 2
+
+
+def test_get_normalizes_raw_memo_uid(isolated_config, fake_keyring, stub_session, monkeypatch):
+    from .conftest import FakeResponse
+    isolated_config.parent.mkdir(parents=True)
+    isolated_config.write_text('url = "https://x"\n', encoding="utf-8")
+    monkeypatch.setenv("MEMOS_TOKEN", "t")
+    stub_session["responses"].append(FakeResponse(200, json_body={"name": "memos/abc"}))
+
+    from typer.testing import CliRunner
+    from memos_cli.cli import app
+
+    result = CliRunner().invoke(app, ["memo", "get", "abc"])
+    assert result.exit_code == 0
+    assert stub_session["calls"][0]["url"].endswith("/api/v1/memos/abc")
+
+
+def test_delete_normalizes_raw_memo_uid(isolated_config, fake_keyring, stub_session, monkeypatch):
+    from .conftest import FakeResponse
+    isolated_config.parent.mkdir(parents=True)
+    isolated_config.write_text('url = "https://x"\n', encoding="utf-8")
+    monkeypatch.setenv("MEMOS_TOKEN", "t")
+    stub_session["responses"].append(FakeResponse(204))
+
+    from typer.testing import CliRunner
+    from memos_cli.cli import app
+
+    result = CliRunner().invoke(app, ["memo", "delete", "abc"])
+    assert result.exit_code == 0
+    assert stub_session["calls"][0]["url"].endswith("/api/v1/memos/abc")

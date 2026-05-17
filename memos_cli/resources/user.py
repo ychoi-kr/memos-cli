@@ -8,6 +8,7 @@ from __future__ import annotations
 import typer
 
 from ..api import Client
+from ..names import normalize
 from ..output import emit, write_user_pretty
 
 app = typer.Typer(help="Manage users", no_args_is_help=True)
@@ -58,7 +59,7 @@ def get(
             )
             return
 
-    path = target if target.startswith("users/") else f"users/{target}"
+    path = normalize("users", target)
     data = client.get(f"/api/v1/{path}")
     emit(
         [data] if pretty else data,

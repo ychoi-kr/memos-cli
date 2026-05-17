@@ -108,3 +108,13 @@ class Client:
         with file_path.open("rb") as f:
             files = {"file": (file_path.name, f)}
             return self._request("POST", path, files=files)
+
+    def download(self, path: str) -> bytes:
+        """Fetch a raw binary response (e.g. attachment content)."""
+        try:
+            resp = self.session.get(self._full(path), timeout=60)
+        except requests.RequestException as e:
+            print(f"error: {e}", file=sys.stderr)
+            sys.exit(1)
+        _exit_for_status(resp)
+        return resp.content
