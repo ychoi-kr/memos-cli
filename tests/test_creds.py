@@ -84,12 +84,15 @@ def test_get_token_missing_exits(isolated_config, fake_keyring):
 
 
 def test_token_location(isolated_config, fake_keyring, monkeypatch):
+    import sys
+
     creds = _reload_creds()
     assert creds.token_location() == "none"
     monkeypatch.setenv("MEMOS_TOKEN", "x")
     assert creds.token_location() == "env"
     fake_keyring[("memos", "token")] = "y"
-    assert creds.token_location() == "keyring"
+    expected = "security" if sys.platform == "darwin" else "keyring"
+    assert creds.token_location() == expected
 
 
 def test_set_and_delete_token(isolated_config, fake_keyring):

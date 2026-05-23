@@ -141,7 +141,7 @@ def get_token() -> str:
 def token_location() -> str:
     if _IS_MACOS:
         if _security_get():
-            return "keyring"
+            return "security"
     else:
         try:
             if keyring.get_password(KEYRING_SERVICE, KEYRING_USERNAME):
