@@ -3,19 +3,57 @@
 조회 우선순위:
     token: keyring("memos", "token") → MEMOS_TOKEN → 종료(3)
     url:   config.toml.url → MEMOS_URL → 종료(1)
+
+macOS에서는 security CLI로 Keychain에 접근한다.
+Python 바이너리의 코드 서명 상태와 무관하게 토큰을 읽고 쓸 수 있다.
+Linux 등 다른 플랫폼에서는 keyring 라이브러리를 사용한다.
 """
 
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
-import keyring
+_IS_MACOS = sys.platform == "darwin"
+
+if not _IS_MACOS:
+    import keyring
 
 KEYRING_SERVICE = "memos"
 KEYRING_USERNAME = "token"
+
+
+def _security_get() -> str | None:
+    try:
+        result = subprocess.run(
+            ["security", "find-generic-password",
+             "-s", KEYRING_SERVICE, "-a", KEYRING_USERNAME, "-w"],
+            capture_output=True, text=True,
+        )
+    except FileNotFoundError:
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _security_set(token: str) -> None:
+    subprocess.run(
+        ["security", "add-generic-password",
+         "-s", KEYRING_SERVICE, "-a", KEYRING_USERNAME, "-w", token, "-U"],
+        check=True, capture_output=True,
+    )
+
+
+def _security_delete() -> None:
+    subprocess.run(
+        ["security", "delete-generic-password",
+         "-s", KEYRING_SERVICE, "-a", KEYRING_USERNAME],
+        capture_output=True,
+    )
 
 
 def config_path() -> Path:
@@ -78,10 +116,13 @@ def get_url() -> str:
 
 
 def get_token() -> str:
-    try:
-        token = keyring.get_password(KEYRING_SERVICE, KEYRING_USERNAME)
-    except keyring.errors.KeyringError:
-        token = None
+    if _IS_MACOS:
+        token = _security_get()
+    else:
+        try:
+            token = keyring.get_password(KEYRING_SERVICE, KEYRING_USERNAME)
+        except keyring.errors.KeyringError:
+            token = None
 
     if token:
         return token
@@ -98,25 +139,35 @@ def get_token() -> str:
 
 
 def token_location() -> str:
-    try:
-        if keyring.get_password(KEYRING_SERVICE, KEYRING_USERNAME):
+    if _IS_MACOS:
+        if _security_get():
             return "keyring"
-    except keyring.errors.KeyringError:
-        pass
+    else:
+        try:
+            if keyring.get_password(KEYRING_SERVICE, KEYRING_USERNAME):
+                return "keyring"
+        except keyring.errors.KeyringError:
+            pass
     if os.environ.get("MEMOS_TOKEN"):
         return "env"
     return "none"
 
 
 def set_token(token: str) -> None:
-    keyring.set_password(KEYRING_SERVICE, KEYRING_USERNAME, token)
+    if _IS_MACOS:
+        _security_set(token)
+    else:
+        keyring.set_password(KEYRING_SERVICE, KEYRING_USERNAME, token)
 
 
 def delete_token() -> None:
-    try:
-        keyring.delete_password(KEYRING_SERVICE, KEYRING_USERNAME)
-    except keyring.errors.PasswordDeleteError:
-        pass
+    if _IS_MACOS:
+        _security_delete()
+    else:
+        try:
+            keyring.delete_password(KEYRING_SERVICE, KEYRING_USERNAME)
+        except keyring.errors.PasswordDeleteError:
+            pass
 
 
 def get_resolved() -> tuple[str, str]:
